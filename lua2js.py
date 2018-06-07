@@ -9,24 +9,31 @@ import re
 
 global src_path
 global dst_path
-src_path = "E:/client/SXGames_test/games/xian/"
-dst_path = "E:/client/SXGame_html5/src/games/xian/"
+global author
+
+src_path = "E:/client/SXGames_test/games/padk/"
+dst_path = "E:/client/SXGame_html5/src/games/padk/"
+author = '''/*
+ * @Author: laiwenlong
+ * @Date: 2018-6-7 15:15:32
+ */
+'''
 
 def Iterative(path):
 	for fpath,dirs,fs in os.walk(path):
-		for dir in dirs:
-			#屏蔽指定文件夹
-			if dir == 'images':
-				continue
-			mkdir = os.path.join(dst_path, dir)
-			if not os.path.exists(mkdir):
-				os.mkdir(mkdir)
 		dpath = fpath.replace(src_path, dst_path)
+		if string.find(dpath, "images") != -1:
+			continue
+		if not os.path.exists(dpath):
+			os.mkdir(dpath)
 		for f in fs:
 			file_src = os.path.join(fpath,f)
 			file_dst = os.path.join(dpath, os.path.splitext(f)[0]+'.js')
-			#只转换lua文件，并且目标文件不存在
-			if os.path.splitext(f)[1] == '.lua' and not os.path.exists(file_dst):
+			#只转换lua文件
+			if os.path.splitext(f)[1] == '.lua':
+				#目标文件存在则先删除
+				if os.path.exists(file_dst):
+					os.remove(file_dst)
 				convert_lua_2_js(file_src, file_dst)
 
 # 插入描述
@@ -102,10 +109,10 @@ config_replace = [
 
 	# 构造函数function M:ctor(...) 加上 this._super(...)
 	[mode_re, '(?<=\n)( *)function\s+([\w]+?):(ctor) *\(([\s\S]*?)\)',
-		'\g<1>\g<3> : function(\g<4>)\n\g<1>{\n    \g<1>var self = this\n    \g<1>this._super(\g<4>)'],
+		'\g<1>\g<3> : function(\g<4>)\n\g<1>{\n    \g<1>this._super(\g<4>)'],
 	# 类函数 function GYPlayJI.PlayChong(pChair) ... end -> PlayChong : function(pChair) { ... }
 	[mode_re, '(?<=\n)( *)function\s+([\w]+?)[.:]([\w]+?) *\(([\s\S]*?)\)',
-		'\g<1>\g<3> : function(\g<4>)\n\g<1>{\n    \g<1>var self = this'],
+		'\g<1>\g<3> : function(\g<4>)\n\g<1>{'],
 
 
 	########## 逻辑 ##########
@@ -257,7 +264,7 @@ config_replace = [
 	# nil -> null
 	[mode_re, '(?<=\W)nil(?=\W)', 'null'],
 	# 关键词 self -> this (函数开头加了var self = this 这里就不要处理了)
-	# [mode_re, '(?<=\W)self\.', 'this.'],
+	[mode_re, '(?<=\W)self\.', 'this.'],
 
 
 	########## lua函数 -> js函数 ##########
@@ -400,7 +407,8 @@ def convert_lua_2_js(file_src, file_dst):
 
 	# 写文件
 	fp = open(file_dst, 'wb')
-	fline(fp)
+	# fline(fp)
+	fwriteline(fp, author)
 	fwriteline(fp, "\"use strict\"")
 	fline(fp)
 	# 继承类的形式
@@ -428,6 +436,7 @@ def convert_lua_2_js(file_src, file_dst):
 def fwrite(fp, s, *args):
 	if len(args) > 0:
 		tnum = args[0]
+		print "########" + tab_size_dst
 		if tab_size_dst >= 2:
 			for i in range(0, tnum):
 				for j in range(0, tab_size_dst):
